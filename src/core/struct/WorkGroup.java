@@ -18,7 +18,7 @@ public class WorkGroup {
 	}
 
 	public void addMember(WorkObject workObject) {
-		workObject.setGroupId(getGroupId());
+		workObject.setGroup(this);
 		member.add(workObject);
 	}
 

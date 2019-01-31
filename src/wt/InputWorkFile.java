@@ -28,60 +28,70 @@ import util.Log;
 import util.Utils;
 
 public class InputWorkFile implements InputWork {
-	// 作业路径
-	private String workDirPath;
+	// 输入路径
+	private String inDir;
+	// 输出路径
+	private String outDir;
+	// 临时目录
+	private String tempDir;
 
-	// 阈值
-	private int threshold;
+	// java文件阈值
+	private int thresholdJava;
 
-	private String pathRoot = "resource/test";
+	// class文件阈值
+	private int thresholdClass;
 
-	public InputWorkFile(String workDirPath, int threshold) {
-		this.workDirPath = workDirPath;
-		this.threshold = threshold;
+	public InputWorkFile(String inDir, String outDir, String tempDir, int thresholdJava, int thresholdClass) {
+		this.inDir = inDir;
+		this.outDir = outDir;
+		this.tempDir = tempDir;
+		this.thresholdJava = thresholdJava;
+		this.thresholdClass = thresholdClass;
 	}
 
 	/**
 	 * 检查输入目录，如果不符合要求则返回false
 	 */
 	public boolean check() {
-		File file = new File(getWorkDirPath());
+		File file = new File(getInDir());
 
 		if (!file.exists() || !file.isDirectory()) {
-			Log.error("文件不存在或者不是一个目录,path={}", getWorkDirPath());
+			Log.error("文件不存在或者不是一个目录,path={}", getInDir());
 			return false;
 		}
 
 		// 沒文件
 		if (file.list().length <= 0) {
-			Log.error("空目录,path={}", getWorkDirPath());
+			Log.error("空目录,path={}", getInDir());
 			return false;
 		}
 
 		return true;
 	}
 
-	public Map<StudentObject, WorkObject> read() {
-		Map<StudentObject, WorkObject> data = new HashMap<>();
+	public List<WorkObject> read() {
+		List<WorkObject> data = new ArrayList<>();
 		if (!check()) {
 			return data;
 		}
 
-		File dir = new File(getWorkDirPath());
+		File dir = new File(getInDir());
 		File[] files = dir.listFiles(new FileFilter() {
 			@Override
 			public boolean accept(File pathname) {
-				if (pathname.isFile() && pathname.getName().endsWith(".jar")) {
+				if (pathname.isFile() && pathname.getName().matches(REGEX_FILENAME)) {
+					Log.info("load file={}", pathname.getName());
 					return true;
 				}
 				return false;
 			}
 		});
 
+		Log.info("start load file info");
 		for (File file : files) {
 			try {
 				WorkObject workObject = readOneWork(file);
-				data.put(workObject.getStudent(), workObject);
+				data.add(workObject);
 			} catch (IOException e) {
 				Log.error("read filed,path={}", file.getAbsolutePath());
 				e.printStackTrace();
@@ -91,34 +101,24 @@ public class InputWorkFile implements InputWork {
 		return data;
 	}
 
+	/** 作业编号_学号_姓名_班级.jar */
+	private static String REGEX_FILENAME = "[0-9]+_[0-9]+_[\\\\u4e00-\\\\u9fa5]+_[0-9]+\\.jar";
+
 	// 读入一份作业
 	private WorkObject readOneWork(File file) throws IOException {
-		WorkObject result = new WorkObject();
+		String[] worlds = notSuffix(file.getName()).split("_");
+		StudentObject student = new StudentObject(worlds[1], worlds[2], worlds[3]);
+		CodeObject code = readCode(file, student);
+		WorkObject result = new WorkObject(student, code, Integer.valueOf(worlds[0]));
 
-		result.setStudent(readStudent(file.getName()));
-		result.setCode(readCode(file, result.getStudent()));
-
-		result.getStudent().setWorkObject(result);
-
-		return result;
-	}
-
-	private StudentObject readStudent(String fileName) {
-		StudentObject result = null;
-		String[] words = fileName.split("_");
-
-		if (words.length < 3) {
-			return result;
-		}
-
-		result = new StudentObject(words[0], words[1], words[2].replaceAll(".jar", ""));
+		Log.info("read java file={}", file.getName());
 		return result;
 	}
 
 	private CodeObject readCode(File file, StudentObject student) throws IOException {
 		// unzip
 		Path source = Paths.get(file.getAbsolutePath());
-		Path targetDir = Paths.get(pathRoot, file.getName().replace(".jar", ""));
+		Path targetDir = Paths.get(tempDir, notSuffix(file.getName()));
 
 		deleteNotEmptyDir(targetDir);
 		Files.createDirectories(targetDir);
@@ -199,20 +199,53 @@ public class InputWorkFile implements InputWork {
 		return result;
 	}
 
+	private String notSuffix(String fileName) {
+		return fileName.replaceAll(EFileType.JAR.getType(), "");
+	}
+
+	public String getInDir() {
+		return inDir;
+	}
+
+	public void setInDir(String inDir) {
+		this.inDir = inDir;
+	}
+
+	public String getOutDir() {
+		return outDir;
+	}
+
+	public void setOutDir(String outDir) {
+		this.outDir = outDir;
+	}
+
+	public String getTempDir() {
+		return tempDir;
+	}
+
+	public void setTempDir(String tempDir) {
+		this.tempDir = tempDir;
+	}
+
+	public int getThresholdJava() {
+		return thresholdJava;
+	}
+
+	public void setThresholdJava(int thresholdJava) {
+		this.thresholdJava = thresholdJava;
+	}
+
+	public int getThresholdClass() {
+		return thresholdClass;
+	}
+
+	public void setThresholdClass(int thresholdClass) {
+		this.thresholdClass = thresholdClass;
+	}
+
+	@Override
 	public int threshold() {
-		return threshold;
+		// TODO Auto-generated method stub
+		return 0;
 	}
-
-	public String getWorkDirPath() {
-		return workDirPath;
-	}
-
-	public void setWorkDirPath(String workDirPath) {
-		this.workDirPath = workDirPath;
-	}
-
-	public void setThreshold(int threshold) {
-		this.threshold = threshold;
-	}
-
 }

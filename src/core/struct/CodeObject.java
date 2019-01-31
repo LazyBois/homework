@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class CodeObject {
+	
+	private WorkObject workObject;
 
 	private StudentObject student;
 
@@ -60,6 +62,14 @@ public class CodeObject {
 
 	public void setClassFiles(Set<Path> classFiles) {
 		this.classFiles = classFiles;
+	}
+
+	public WorkObject getWorkObject() {
+		return workObject;
+	}
+
+	public void setWorkObject(WorkObject workObject) {
+		this.workObject = workObject;
 	}
 	
 }
